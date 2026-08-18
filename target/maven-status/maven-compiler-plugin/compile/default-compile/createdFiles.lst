@@ -1,6 +1,9 @@
+com\example\audit\controller\ComplianceController.class
 com\example\audit\service\AuditLogService.class
 com\example\audit\model\AuditLog.class
 com\example\audit\model\ExportBundle.class
 com\example\audit\controller\AuditLogController.class
 com\example\audit\repository\AuditLogRepository.class
+com\example\audit\service\ComplianceService.class
 com\example\audit\AuditLogApplication.class
+com\example\audit\model\ComplianceSummary.class

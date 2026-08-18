@@ -21,4 +21,9 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long>, JpaSp
     List<AuditLog> findByActorIdOrderByIdAsc(String actorId);
 
     List<AuditLog> findByResourceIdOrderByIdAsc(String resourceId);
+
+    // Scenario C additions
+    List<AuditLog> findByTimestampBetweenAndIsArchivedFalse(Instant from, Instant to);
+
+    long countByActorIdAndTimestampAfter(String actorId, Instant timestamp);
 }

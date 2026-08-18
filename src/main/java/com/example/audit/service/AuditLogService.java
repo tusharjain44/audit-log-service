@@ -4,6 +4,7 @@ import com.example.audit.model.AuditLog;
 import com.example.audit.model.ExportBundle;
 import com.example.audit.repository.AuditLogRepository;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,11 +22,13 @@ import java.util.*;
 public class AuditLogService {
 
     private final AuditLogRepository repository;
+    private final ComplianceService complianceService;
     private static final String GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
     private static final String REDACTED_PAYLOAD_FLAG = "[REDACTED_FOR_PRIVACY]";
 
-    public AuditLogService(AuditLogRepository repository) {
+    public AuditLogService(AuditLogRepository repository, @Lazy ComplianceService complianceService) {
         this.repository = repository;
+        this.complianceService = complianceService;
     }
 
     @Transactional
@@ -35,7 +38,17 @@ public class AuditLogService {
         String prevHash = lastRecord.map(AuditLog::getCurrentHash).orElse(GENESIS_HASH);
         event.setPreviousHash(prevHash);
         event.setCurrentHash(calculateHash(event));
-        return repository.save(event);
+
+        AuditLog savedEvent = repository.save(event);
+
+        // Scenario C: Check for compliance anomalies (using try-catch so it doesn't fail the transaction)
+        try {
+            complianceService.analyzeForAnomalies(savedEvent);
+        } catch (Exception e) {
+            System.err.println("Failed to run anomaly analysis: " + e.getMessage());
+        }
+
+        return savedEvent;
     }
 
     public Page<AuditLog> queryEvents(String actorId, String eventType, String resourceType,
