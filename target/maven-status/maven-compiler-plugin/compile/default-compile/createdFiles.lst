@@ -1,0 +1,5 @@
+com\example\audit\controller\AuditLogController.class
+com\example\audit\repository\AuditLogRepository.class
+com\example\audit\service\AuditLogService.class
+com\example\audit\model\AuditLog.class
+com\example\audit\AuditLogApplication.class
