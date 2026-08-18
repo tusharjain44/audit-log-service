@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,4 +15,10 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long>, JpaSp
     Optional<AuditLog> findTopByOrderByIdDesc();
 
     List<AuditLog> findAllByOrderByIdAsc();
+
+    List<AuditLog> findByTimestampBeforeAndIsArchivedFalse(Instant beforeDate);
+
+    List<AuditLog> findByActorIdOrderByIdAsc(String actorId);
+
+    List<AuditLog> findByResourceIdOrderByIdAsc(String resourceId);
 }

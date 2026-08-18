@@ -16,29 +16,18 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String eventType;
+    @Column(nullable = false) private String eventType;
+    @Column(nullable = false) private String actorId;
+    @Column(nullable = false) private String resourceType;
+    @Column(nullable = false) private String resourceId;
+    @Column(columnDefinition = "TEXT", nullable = false) private String payload;
+    @Column(nullable = false) private Instant timestamp;
+    @Column(nullable = false, length = 64) private String currentHash;
+    @Column(nullable = false, length = 64) private String previousHash;
 
-    @Column(nullable = false)
-    private String actorId;
-
-    @Column(nullable = false)
-    private String resourceType;
-
-    @Column(nullable = false)
-    private String resourceId;
-
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String payload;
-
-    @Column(nullable = false)
-    private Instant timestamp;
-
-    @Column(nullable = false, length = 64)
-    private String currentHash;
-
-    @Column(nullable = false, length = 64)
-    private String previousHash;
+    // Scenario B Additions
+    @Column(nullable = false) private boolean isArchived = false;
+    @Column(nullable = false) private boolean isRedacted = false;
 
     public AuditLog() {}
 
@@ -60,4 +49,9 @@ public class AuditLog {
     public void setCurrentHash(String currentHash) { this.currentHash = currentHash; }
     public String getPreviousHash() { return previousHash; }
     public void setPreviousHash(String previousHash) { this.previousHash = previousHash; }
+
+    public boolean isArchived() { return isArchived; }
+    public void setArchived(boolean archived) { isArchived = archived; }
+    public boolean isRedacted() { return isRedacted; }
+    public void setRedacted(boolean redacted) { isRedacted = redacted; }
 }
