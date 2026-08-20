@@ -33,12 +33,12 @@ public class ComplianceService {
 
     public Map&lt;String, Long&gt; generateReport(Instant start, Instant end) {
         // FIXED ARCH-06: Query database directly instead of loading entities into memory
-<span class="nc" id="L36">        List&lt;Object[]&gt; results = repository.countEventsByType(start, end);</span>
-<span class="nc" id="L37">        Map&lt;String, Long&gt; report = new HashMap&lt;&gt;();</span>
-<span class="nc bnc" id="L38" title="All 2 branches missed.">        for (Object[] row : results) {</span>
-<span class="nc" id="L39">            report.put((String) row[0], (Long) row[1]);</span>
-<span class="nc" id="L40">        }</span>
-<span class="nc" id="L41">        return report;</span>
+<span class="fc" id="L36">        List&lt;Object[]&gt; results = repository.countEventsByType(start, end);</span>
+<span class="fc" id="L37">        Map&lt;String, Long&gt; report = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        for (Object[] row : results) {</span>
+<span class="fc" id="L39">            report.put((String) row[0], (Long) row[1]);</span>
+<span class="fc" id="L40">        }</span>
+<span class="fc" id="L41">        return report;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

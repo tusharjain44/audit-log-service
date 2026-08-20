@@ -25,14 +25,14 @@ public class AuditLogController {
 
     @PostMapping(&quot;/events&quot;)
     public ResponseEntity&lt;AuditLog&gt; writeEvent(@Valid @RequestBody AuditLogRequest request) {
-<span class="nc" id="L28">        AuditLog log = new AuditLog();</span>
-<span class="nc" id="L29">        log.setEventType(request.getEventType());</span>
-<span class="nc" id="L30">        log.setActorId(request.getActorId());</span>
-<span class="nc" id="L31">        log.setResourceType(request.getResourceType());</span>
-<span class="nc" id="L32">        log.setResourceId(request.getResourceId());</span>
-<span class="nc" id="L33">        log.setPayload(request.getPayload());</span>
+<span class="fc" id="L28">        AuditLog log = new AuditLog();</span>
+<span class="fc" id="L29">        log.setEventType(request.getEventType());</span>
+<span class="fc" id="L30">        log.setActorId(request.getActorId());</span>
+<span class="fc" id="L31">        log.setResourceType(request.getResourceType());</span>
+<span class="fc" id="L32">        log.setResourceId(request.getResourceId());</span>
+<span class="fc" id="L33">        log.setPayload(request.getPayload());</span>
         
-<span class="nc" id="L35">        return ResponseEntity.ok(auditLogService.createEvent(log));</span>
+<span class="fc" id="L35">        return ResponseEntity.ok(auditLogService.createEvent(log));</span>
     }
 
     @GetMapping(&quot;/events&quot;)
@@ -47,11 +47,11 @@ public class AuditLogController {
             @RequestParam(defaultValue = &quot;10&quot;) int size) {
             
         // Enforce strict pagination bounds
-<span class="nc" id="L50">        int boundedSize = Math.min(size, 100);</span>
-<span class="nc" id="L51">        int boundedPage = Math.max(page, 0);</span>
+<span class="fc" id="L50">        int boundedSize = Math.min(size, 100);</span>
+<span class="fc" id="L51">        int boundedPage = Math.max(page, 0);</span>
 
-<span class="nc" id="L53">        return ResponseEntity.ok(auditLogService.queryEvents(</span>
-<span class="nc" id="L54">                actorId, eventType, resourceType, resourceId, from, to, PageRequest.of(boundedPage, boundedSize)));</span>
+<span class="fc" id="L53">        return ResponseEntity.ok(auditLogService.queryEvents(</span>
+<span class="fc" id="L54">                actorId, eventType, resourceType, resourceId, from, to, PageRequest.of(boundedPage, boundedSize)));</span>
     }
 
     @GetMapping(&quot;/verify&quot;)
@@ -61,20 +61,20 @@ public class AuditLogController {
 
     @DeleteMapping(&quot;/archive&quot;)
     public ResponseEntity&lt;String&gt; archiveRecords(@RequestParam Instant beforeDate) {
-<span class="nc" id="L64">        int count = auditLogService.archiveOldRecords(beforeDate);</span>
-<span class="nc" id="L65">        return ResponseEntity.ok(&quot;Archived &quot; + count + &quot; records older than &quot; + beforeDate);</span>
+<span class="fc" id="L64">        int count = auditLogService.archiveOldRecords(beforeDate);</span>
+<span class="fc" id="L65">        return ResponseEntity.ok(&quot;Archived &quot; + count + &quot; records older than &quot; + beforeDate);</span>
     }
 
     @PostMapping(&quot;/events/{id}/redact&quot;)
     public ResponseEntity&lt;AuditLog&gt; redactRecord(@PathVariable Long id) {
-<span class="nc" id="L70">        return ResponseEntity.ok(auditLogService.redactRecord(id));</span>
+<span class="fc" id="L70">        return ResponseEntity.ok(auditLogService.redactRecord(id));</span>
     }
 
     @GetMapping(&quot;/export&quot;)
     public ResponseEntity&lt;ExportBundle&gt; exportRecords(
             @RequestParam(required = false) String actorId,
             @RequestParam(required = false) String resourceId) {
-<span class="nc" id="L77">        return ResponseEntity.ok(auditLogService.exportRecords(actorId, resourceId));</span>
+<span class="fc" id="L77">        return ResponseEntity.ok(auditLogService.exportRecords(actorId, resourceId));</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

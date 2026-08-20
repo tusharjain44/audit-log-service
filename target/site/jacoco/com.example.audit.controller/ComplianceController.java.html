@@ -21,7 +21,7 @@ public class ComplianceController {
     public ResponseEntity&lt;Map&lt;String, Long&gt;&gt; getReport(
             @RequestParam Instant start,
             @RequestParam Instant end) {
-<span class="nc" id="L24">        return ResponseEntity.ok(complianceService.generateReport(start, end));</span>
+<span class="fc" id="L24">        return ResponseEntity.ok(complianceService.generateReport(start, end));</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
