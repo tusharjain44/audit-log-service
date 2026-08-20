@@ -12,7 +12,10 @@ Used Gemini as an interactive coding assistant for architecture validation, secu
 * Spring Security filter chain configurations were adapted from Spring documentation via AI suggestions.
 * Tested thoroughly via `mvn clean test` combining unit, concurrency, and MockMvc integration tests.
 
-## Limitations Inventory
+## Limitations & Architectural Trade-offs
+* **Scalability & Concurrency (ARCH-04):** The current tamper-evident chain uses a synchronized block and JPA Pessimistic Write locks. This provides strict serialization for a single JVM. For multi-node distributed scale, this must be upgraded to a distributed lock (e.g., Redis or Zookeeper) and a durable external chain head anchor.
+* **Infrastructure Security:** TLS termination and strict rate-limiting are explicitly deferred to the deployment infrastructure layer (API Gateway).
+
 * In-memory file H2 database used for prototype; production requires external Postgres/MySQL.
 * Full chain verification is currently linear ($O(n)$) and will require batching logic at production scale.
 

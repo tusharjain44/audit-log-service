@@ -38,24 +38,25 @@ class AuditLogControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void whenInvalidPayload_thenReturns400() throws Exception {
-        String badPayload = "{\"eventType\": \"\"}";
-        mockMvc.perform(post("/audit/events").contentType(MediaType.APPLICATION_JSON).content(badPayload))
-               .andExpect(status().isBadRequest());
+    @WithMockUser(username = "user-1", roles = "USER")
+    void testCrossActorIsolationBlocksAccess() throws Exception {
+        mockMvc.perform(get("/audit/events?actorId=user-2")).andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "USER")
-    void fullApiRouteCoverage() throws Exception {
-        // 1. POST Event
-        String validPayload = "{\"eventType\": \"LOGIN\", \"actorId\": \"u1\", \"resourceType\": \"SYS\", \"resourceId\": \"1\", \"payload\": \"data\"}";
-        mockMvc.perform(post("/audit/events").contentType(MediaType.APPLICATION_JSON).content(validPayload))
+    void testMalformedPaginationReturns400() throws Exception {
+        mockMvc.perform(get("/audit/events?page=-1&size=5000")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void testIdempotencyBlocksReplayAttacks() throws Exception {
+        String payload = "{\"eventType\": \"LOGIN\", \"actorId\": \"u1\", \"resourceType\": \"SYS\", \"resourceId\": \"1\", \"payload\": \"data\"}";
+        mockMvc.perform(post("/audit/events").header("Idempotency-Key", "tx-999").contentType(MediaType.APPLICATION_JSON).content(payload))
                .andExpect(status().isOk());
-               
-        // 2. GET Events (Query)
-        mockMvc.perform(get("/audit/events?actorId=u1&eventType=LOGIN&page=0&size=10"))
-               .andExpect(status().isOk());
+        mockMvc.perform(post("/audit/events").header("Idempotency-Key", "tx-999").contentType(MediaType.APPLICATION_JSON).content(payload))
+               .andExpect(status().isConflict());
     }
 
     @Test

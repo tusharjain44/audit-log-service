@@ -33,8 +33,7 @@ class AuditLogServiceTest {
         AuditLog saved = createTestEvent();
         saved.setPayload("tampered data");
         auditLogRepository.save(saved);
-        Map<String, Object> verification = auditLogService.verifyChain();
-        assertFalse((Boolean) verification.get("intact"));
+        assertFalse((Boolean) auditLogService.verifyChain().get("intact"));
     }
 
     @Test
@@ -66,44 +65,40 @@ class AuditLogServiceTest {
     }
 
     @Test
-    void testQueryAndExportAndArchiveBranches() {
-        AuditLog saved = createTestEvent();
-        
-        // Coverage for Query Events
-        assertNotNull(auditLogService.queryEvents("user-1", "LOGIN", "SYS", "1", Instant.now().minus(1, ChronoUnit.DAYS), Instant.now().plus(1, ChronoUnit.DAYS), PageRequest.of(0, 10)));
-        assertNotNull(auditLogService.queryEvents(null, null, null, null, null, null, PageRequest.of(0, 10)));
-
-        // Coverage for Export
-        ExportBundle bundle = auditLogService.exportRecords("user-1", null);
-        assertNotNull(bundle.getBundleSignature());
-        bundle.setBundleSignature("test");
-        assertEquals("test", bundle.getBundleSignature());
-        auditLogService.exportRecords(null, "1");
-
-        // Coverage for Compliance Report
-        assertNotNull(complianceService.generateReport(Instant.now().minus(1, ChronoUnit.DAYS), Instant.now().plus(1, ChronoUnit.DAYS)));
-
-        // Coverage for Archival Sweep
-        auditLogService.automatedRetentionSweep();
-        assertEquals(1, auditLogService.archiveOldRecords(Instant.now().plus(1, ChronoUnit.DAYS)));
+    void testPersistenceFailureRollsBack() {
+        AuditLog invalidLog = new AuditLog();
+        assertThrows(Exception.class, () -> auditLogService.createEvent(invalidLog));
+        assertEquals(0, auditLogRepository.count(), "Rollback failed; partial state persisted");
+        assertTrue((Boolean) auditLogService.verifyChain().get("intact"), "Chain fractured during rollback");
     }
 
     @Test
-    void modelGetterSetterCoverage() {
-        // Brute force model line coverage
-        AuditLog log = new AuditLog();
-        log.setId(1L); assertEquals(1L, log.getId());
-        log.setEventType("E"); assertEquals("E", log.getEventType());
-        log.setActorId("A"); assertEquals("A", log.getActorId());
-        log.setResourceType("R"); assertEquals("R", log.getResourceType());
-        log.setResourceId("I"); assertEquals("I", log.getResourceId());
-        log.setPayload("P"); assertEquals("P", log.getPayload());
-        log.setTimestamp(Instant.MAX); assertEquals(Instant.MAX, log.getTimestamp());
-        log.setCurrentHash("C"); assertEquals("C", log.getCurrentHash());
-        log.setPreviousHash("P"); assertEquals("P", log.getPreviousHash());
-        log.setArchived(true); assertTrue(log.isArchived());
-        log.setRedacted(true); assertTrue(log.isRedacted());
-        log.setRedactionReceipt("R"); assertEquals("R", log.getRedactionReceipt());
+    void testDedicatedCryptoBoundary() throws Exception {
+        java.lang.reflect.Method hashMethod = AuditLogService.class.getDeclaredMethod("hashString", String.class);
+        hashMethod.setAccessible(true);
+        String hash1 = (String) hashMethod.invoke(auditLogService, "PAYLOAD_A");
+        String hash2 = (String) hashMethod.invoke(auditLogService, "PAYLOAD_A");
+        String hash3 = (String) hashMethod.invoke(auditLogService, "PAYLOAD_B");
+        
+        assertEquals(64, hash1.length());
+        assertEquals(hash1, hash2, "Crypto hashing is not deterministic");
+        assertNotEquals(hash1, hash3, "Crypto hashing produced a collision");
+    }
+
+    @Test
+    void testQueryAndExportAndArchiveBranches() {
+        AuditLog saved = createTestEvent();
+        assertNotNull(auditLogService.queryEvents("user-1", "LOGIN", "SYS", "1", Instant.now().minus(1, ChronoUnit.DAYS), Instant.now().plus(1, ChronoUnit.DAYS), PageRequest.of(0, 10)));
+        assertNotNull(auditLogService.queryEvents(null, null, null, null, null, null, PageRequest.of(0, 10)));
+
+        ExportBundle bundle = auditLogService.exportRecords("user-1", null);
+        assertNotNull(bundle.getBundleSignature());
+        auditLogService.exportRecords(null, "1");
+        
+        assertNotNull(complianceService.generateReport(Instant.now().minus(1, ChronoUnit.DAYS), Instant.now().plus(1, ChronoUnit.DAYS)));
+
+        auditLogService.automatedRetentionSweep();
+        assertEquals(1, auditLogService.archiveOldRecords(Instant.now().plus(1, ChronoUnit.DAYS)));
     }
 
     private AuditLog createTestEvent() {

@@ -17,21 +17,28 @@ import java.util.Map;
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleValidationExceptions(MethodArgumentNotValidException ex) {
-        // STRICT SEC-08: Log the failure but DO NOT log the raw input map to prevent PII leakage
-<span class="fc" id="L21">        logger.warn(&quot;SECURITY_AUDIT: Request rejected due to payload validation failure.&quot;);</span>
-        
-<span class="fc" id="L23">        Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L24">        errors.put(&quot;error&quot;, &quot;Bad Request&quot;);</span>
-<span class="fc" id="L25">        errors.put(&quot;message&quot;, &quot;Payload validation failed. Ensure all fields meet formatting constraints.&quot;);</span>
-<span class="fc" id="L26">        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);</span>
+<span class="nc" id="L20">        logger.warn(&quot;SECURITY_AUDIT: Request rejected due to payload validation failure.&quot;);</span>
+<span class="nc" id="L21">        Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L22">        errors.put(&quot;error&quot;, &quot;Bad Request&quot;);</span>
+<span class="nc" id="L23">        errors.put(&quot;message&quot;, &quot;Payload validation failed. Ensure all fields meet formatting constraints.&quot;);</span>
+<span class="nc" id="L24">        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);</span>
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleIllegalArgument(IllegalArgumentException ex) {
+<span class="fc" id="L29">        logger.warn(&quot;SECURITY_AUDIT: Malformed query parameters detected.&quot;);</span>
+<span class="fc" id="L30">        Map&lt;String, String&gt; err = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L31">        err.put(&quot;error&quot;, &quot;Bad Request&quot;);</span>
+<span class="fc" id="L32">        err.put(&quot;message&quot;, ex.getMessage());</span>
+<span class="fc" id="L33">        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);</span>
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleAllExceptions(Exception ex) {
-<span class="nc" id="L31">        logger.error(&quot;SECURITY_AUDIT: Internal server error encountered.&quot;, ex);</span>
-<span class="nc" id="L32">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L33">        response.put(&quot;error&quot;, &quot;Internal Server Error&quot;);</span>
-<span class="nc" id="L34">        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);</span>
+<span class="nc" id="L38">        logger.error(&quot;SECURITY_AUDIT: Internal server error encountered.&quot;, ex);</span>
+<span class="nc" id="L39">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L40">        response.put(&quot;error&quot;, &quot;Internal Server Error&quot;);</span>
+<span class="nc" id="L41">        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

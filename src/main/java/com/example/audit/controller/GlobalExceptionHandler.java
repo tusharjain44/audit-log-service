@@ -17,13 +17,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        // STRICT SEC-08: Log the failure but DO NOT log the raw input map to prevent PII leakage
         logger.warn("SECURITY_AUDIT: Request rejected due to payload validation failure.");
-        
         Map<String, String> errors = new HashMap<>();
         errors.put("error", "Bad Request");
         errors.put("message", "Payload validation failed. Ensure all fields meet formatting constraints.");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
+        logger.warn("SECURITY_AUDIT: Malformed query parameters detected.");
+        Map<String, String> err = new HashMap<>();
+        err.put("error", "Bad Request");
+        err.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
     }
 
     @ExceptionHandler(Exception.class)
