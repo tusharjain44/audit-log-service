@@ -3,17 +3,17 @@ package com.example.audit.service;
 import com.example.audit.model.AuditLog;
 import com.example.audit.model.ExportBundle;
 import com.example.audit.repository.AuditLogRepository;
-import jakarta.persistence.criteria.Predicate;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import jakarta.persistence.criteria.Predicate;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -21,144 +21,142 @@ import java.util.*;
 @Service
 public class AuditLogService {
 
+    private static final String GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
     private final AuditLogRepository repository;
     private final ComplianceService complianceService;
-    private static final String GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
-    private static final String REDACTED_PAYLOAD_FLAG = "[REDACTED_FOR_PRIVACY]";
+    private final TransactionTemplate transactionTemplate;
 
-    public AuditLogService(AuditLogRepository repository, @Lazy ComplianceService complianceService) {
+    public AuditLogService(AuditLogRepository repository, ComplianceService complianceService, TransactionTemplate transactionTemplate) {
         this.repository = repository;
         this.complianceService = complianceService;
+        this.transactionTemplate = transactionTemplate;
     }
 
-    @Transactional
     public AuditLog createEvent(AuditLog event) {
-        event.setTimestamp(Instant.now().truncatedTo(ChronoUnit.MILLIS));
-        Optional<AuditLog> lastRecord = repository.findTopByOrderByIdDesc();
-        String prevHash = lastRecord.map(AuditLog::getCurrentHash).orElse(GENESIS_HASH);
-        event.setPreviousHash(prevHash);
-        event.setCurrentHash(calculateHash(event));
-
-        AuditLog savedEvent = repository.save(event);
-
-        // Scenario C: Check for compliance anomalies (using try-catch so it doesn't fail the transaction)
-        try {
-            complianceService.analyzeForAnomalies(savedEvent);
-        } catch (Exception e) {
-            System.err.println("Failed to run anomaly analysis: " + e.getMessage());
+        synchronized (this) {
+            AuditLog savedEvent = transactionTemplate.execute(status -> {
+                event.setTimestamp(Instant.now().truncatedTo(ChronoUnit.MILLIS));
+                Optional<AuditLog> lastRecord = repository.findTopByOrderByIdDesc();
+                String prevHash = lastRecord.map(AuditLog::getCurrentHash).orElse(GENESIS_HASH);
+                
+                event.setPreviousHash(prevHash);
+                event.setCurrentHash(calculateHash(event));
+                
+                return repository.saveAndFlush(event);
+            });
+            
+            try {
+                complianceService.analyzeForAnomalies(savedEvent);
+            } catch (Exception e) {
+                System.err.println("Failed to run anomaly analysis: " + e.getMessage());
+            }
+            return savedEvent;
         }
-
-        return savedEvent;
     }
 
-    public Page<AuditLog> queryEvents(String actorId, String eventType, String resourceType,
-                                      String resourceId, Instant from, Instant to, Pageable pageable) {
-        return repository.findAll((Specification<AuditLog>) (root, query, cb) -> {
+    @Transactional(readOnly = true)
+    public Page<AuditLog> queryEvents(String actorId, String eventType, String resourceType, String resourceId, Instant from, Instant to, Pageable pageable) {
+        Specification<AuditLog> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.equal(root.get("isArchived"), false));
-
             if (actorId != null) predicates.add(cb.equal(root.get("actorId"), actorId));
             if (eventType != null) predicates.add(cb.equal(root.get("eventType"), eventType));
             if (resourceType != null) predicates.add(cb.equal(root.get("resourceType"), resourceType));
             if (resourceId != null) predicates.add(cb.equal(root.get("resourceId"), resourceId));
             if (from != null) predicates.add(cb.greaterThanOrEqualTo(root.get("timestamp"), from));
             if (to != null) predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), to));
-
+            predicates.add(cb.isFalse(root.get("isArchived")));
             return cb.and(predicates.toArray(new Predicate[0]));
-        }, pageable);
+        };
+        return repository.findAll(spec, pageable);
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> verifyChain() {
-        Map<String, Object> report = new HashMap<>();
-        List<AuditLog> chain = repository.findAllByOrderByIdAsc();
+        List<AuditLog> allLogs = repository.findAllByOrderByIdAsc();
+        Map<String, Object> result = new HashMap<>();
+        
         String expectedPrevHash = GENESIS_HASH;
-
-        for (AuditLog record : chain) {
-            if (!record.isRedacted()) {
-                if (!calculateHash(record).equals(record.getCurrentHash())) {
-                    report.put("intact", false);
-                    report.put("brokenRecordId", record.getId());
-                    report.put("violationType", "MISMATCHED_CONTENT_HASH");
-                    return report;
+        for (AuditLog log : allLogs) {
+            if (!log.getPreviousHash().equals(expectedPrevHash)) {
+                result.put("intact", false);
+                result.put("violationType", "BROKEN_LINK");
+                result.put("recordId", log.getId());
+                return result;
+            }
+            if (!log.isRedacted()) {
+                String recalculatedHash = calculateHash(log);
+                if (!log.getCurrentHash().equals(recalculatedHash)) {
+                    result.put("intact", false);
+                    result.put("violationType", "MISMATCHED_CONTENT_HASH");
+                    result.put("recordId", log.getId());
+                    return result;
                 }
             }
-
-            if (!record.getPreviousHash().equals(expectedPrevHash)) {
-                report.put("intact", false);
-                report.put("brokenRecordId", record.getId());
-                report.put("violationType", "PREVIOUS_HASH_MISMATCH");
-                return report;
-            }
-
-            expectedPrevHash = record.getCurrentHash();
+            expectedPrevHash = log.getCurrentHash();
         }
+        
+        result.put("intact", true);
+        return result;
+    }
 
-        report.put("intact", true);
-        return report;
+    @Scheduled(cron = "0 0 0 * * ?") // Runs at midnight every day
+    public void automatedRetentionSweep() {
+        System.out.println("Running scheduled retention sweep...");
+        archiveOldRecords(Instant.now().minus(365, ChronoUnit.DAYS));
     }
 
     @Transactional
     public int archiveOldRecords(Instant beforeDate) {
         List<AuditLog> oldRecords = repository.findByTimestampBeforeAndIsArchivedFalse(beforeDate);
-        for (AuditLog record : oldRecords) {
-            record.setArchived(true);
-        }
+        oldRecords.forEach(r -> r.setArchived(true));
         repository.saveAll(oldRecords);
         return oldRecords.size();
     }
 
     @Transactional
     public AuditLog redactRecord(Long id) {
-        AuditLog record = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Record not found"));
-
-        record.setPayload(REDACTED_PAYLOAD_FLAG);
-        record.setRedacted(true);
-        return repository.save(record);
+        AuditLog log = repository.findById(id).orElseThrow(() -> new RuntimeException("Record not found"));
+        log.setRedacted(true);
+        log.setPayload("[REDACTED_FOR_PRIVACY]");
+        return repository.save(log);
     }
 
+    @Transactional(readOnly = true)
     public ExportBundle exportRecords(String actorId, String resourceId) {
         List<AuditLog> records = new ArrayList<>();
-        if (actorId != null) {
-            records = repository.findByActorIdOrderByIdAsc(actorId);
-        } else if (resourceId != null) {
-            records = repository.findByResourceIdOrderByIdAsc(resourceId);
+        if (actorId != null) records.addAll(repository.findByActorIdOrderByIdAsc(actorId));
+        else if (resourceId != null) records.addAll(repository.findByResourceIdOrderByIdAsc(resourceId));
+        
+        ExportBundle bundle = new ExportBundle();
+        bundle.setRecords(records);
+        
+        StringBuilder hashChain = new StringBuilder();
+        for (AuditLog r : records) {
+            hashChain.append(r.getCurrentHash());
         }
-
-        StringBuilder combinedHashes = new StringBuilder();
-        for (AuditLog record : records) {
-            combinedHashes.append(record.getCurrentHash());
-        }
-        String bundleSignature = generateRawHash(combinedHashes.toString());
-
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("totalRecords", String.valueOf(records.size()));
-        metadata.put("exportTimestamp", Instant.now().toString());
-
-        return new ExportBundle(records, metadata, bundleSignature);
+        bundle.setBundleSignature(hashString(hashChain.toString()));
+        return bundle;
     }
 
     private String calculateHash(AuditLog log) {
-        String dataToHash = String.format("%s|%s|%s|%s|%s|%s|%s",
-                log.getEventType(), log.getActorId(), log.getResourceType(),
-                log.getResourceId(), log.getPayload(), log.getTimestamp().toString(),
-                log.getPreviousHash());
-        return generateRawHash(dataToHash);
+        String data = log.getPreviousHash() + log.getEventType() + log.getActorId() + 
+                      log.getResourceType() + log.getResourceId() + log.getPayload() + log.getTimestamp();
+        return hashString(data);
     }
 
-    private String generateRawHash(String input) {
+    private String hashString(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
             StringBuilder hexString = new StringBuilder();
-            for (byte b : hashBytes) {
+            for (byte b : hash) {
                 String hex = Integer.toHexString(0xff & b);
                 if (hex.length() == 1) hexString.append('0');
                 hexString.append(hex);
             }
             return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 system environment fault", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Hashing failed", e);
         }
     }
 }

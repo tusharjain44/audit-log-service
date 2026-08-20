@@ -1,18 +1,17 @@
 # AI Usage Log
 
-## Overview
-This log documents the use of AI tools (GitHub Copilot and interactive AI collaboration) during the development of the Audit Log Service assessment. All code generated via AI was reviewed, tested, integrated, and validated locally.
+## Collaboration Model
+Used Gemini as an interactive coding assistant for architecture validation, security configuration, and test generation. 
 
-## Development Log
+## Prompt Transcripts (Samples)
+* "How do I serialize concurrent writes in a Spring Boot JPA service to prevent a race condition on a cryptographic hash chain?"
+* "Generate a MockMvc test suite that verifies HTTP Basic Authentication and RBAC roles (ADMIN vs USER) for Spring Boot 3.2."
+* "What is the correct JPQL query to aggregate event counts by type without loading all entities into memory?"
 
-### Scenario A: Tamper-Evident Engine
-* **AI Assistance:** Prompted for SHA-256 cryptographic hashing logic linking `previousHash` to `currentHash` with a Genesis block fallback.
-* **Review & Verification:** Verified that modifying historical database rows triggers a mismatch during `GET /audit/verify`. Handled database schema adjustments manually on Windows.
+## Reused Material & Verification
+* Spring Security filter chain configurations were adapted from Spring documentation via AI suggestions.
+* Tested thoroughly via `mvn clean test` combining unit, concurrency, and MockMvc integration tests.
 
-### Scenario B: Retention, Redaction & Bulk Export
-* **AI Assistance:** Requested DTO structural outlines for `ExportBundle` and method stubs for archiving and flag-based redaction.
-* **Review & Verification:** Implemented strict flag-based logical redaction (`isRedacted = true`) ensuring the hash chain verification engine skips content recomputation for redacted events while enforcing structural chain continuity.
-
-### Scenario C: Compliance Reporting & Alerting
-* **AI Assistance:** Generated code structures for compliance reporting summaries and high-frequency anomaly detection heuristics.
-* **Review & Verification:** Validated compliance aggregation ranges via HTTP queries and confirmed background thread logging triggers correctly upon rapid event generation.
+## Limitations Inventory
+* In-memory file H2 database used for prototype; production requires external Postgres/MySQL.
+* Full chain verification is currently linear ($O(n)$) and will require batching logic at production scale.

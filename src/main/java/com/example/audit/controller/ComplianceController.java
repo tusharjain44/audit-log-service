@@ -1,11 +1,11 @@
 package com.example.audit.controller;
 
-import com.example.audit.model.ComplianceSummary;
 import com.example.audit.service.ComplianceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/audit/compliance")
@@ -18,13 +18,9 @@ public class ComplianceController {
     }
 
     @GetMapping("/report")
-    public ResponseEntity<ComplianceSummary> getReport(
-            @RequestParam String from,
-            @RequestParam String to) {
-
-        Instant fromInstant = Instant.parse(from);
-        Instant toInstant = Instant.parse(to);
-
-        return ResponseEntity.ok(complianceService.generateReport(fromInstant, toInstant));
+    public ResponseEntity<Map<String, Long>> getReport(
+            @RequestParam Instant start,
+            @RequestParam Instant end) {
+        return ResponseEntity.ok(complianceService.generateReport(start, end));
     }
 }
