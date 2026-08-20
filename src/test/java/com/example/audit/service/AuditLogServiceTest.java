@@ -38,7 +38,6 @@ class AuditLogServiceTest {
         log.setPayload("valid data");
         AuditLog saved = auditLogService.createEvent(log);
 
-        // Bypass service to simulate DB tampering
         saved.setPayload("tampered data");
         auditLogRepository.save(saved);
 
@@ -47,7 +46,8 @@ class AuditLogServiceTest {
     }
 
     @Test
-    void testRedactionSkipsHashFailure() {
+    void testRedactionReceiptPreventsBypass() {
+        // 1. Create a legitimate record
         AuditLog log = new AuditLog();
         log.setEventType("LOGIN");
         log.setActorId("user-1");
@@ -56,11 +56,20 @@ class AuditLogServiceTest {
         log.setPayload("sensitive data");
         AuditLog saved = auditLogService.createEvent(log);
 
-        auditLogService.redactRecord(saved.getId());
+        // 2. Redact it properly via the service
+        AuditLog redacted = auditLogService.redactRecord(saved.getId());
 
-        // Chain should remain intact because redaction is a recognized structural state
+        // 3. Chain should be intact right now
+        assertTrue((Boolean) auditLogService.verifyChain().get("intact"));
+
+        // 4. Simulate Database Attacker: Change payload and keep isRedacted = true
+        redacted.setPayload("[MALICIOUS_TAMPER_EVASION]");
+        auditLogRepository.save(redacted);
+
+        // 5. Verification MUST fail now due to receipt mismatch (Proves SEC-10 & TEST-05)
         Map<String, Object> verification = auditLogService.verifyChain();
-        assertTrue((Boolean) verification.get("intact"));
+        assertFalse((Boolean) verification.get("intact"));
+        assertEquals("MALICIOUS_REDACTION_PAYLOAD", verification.get("violationType"));
     }
 
     @Test

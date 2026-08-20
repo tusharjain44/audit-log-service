@@ -28,30 +28,45 @@ public class AuditLog {
     // Scenario B Additions
     @Column(nullable = false) private boolean isArchived = false;
     @Column(nullable = false) private boolean isRedacted = false;
+    
+    // Cryptographic proof of authorized redaction
+    @Column(length = 64) private String redactionReceipt;
 
     public AuditLog() {}
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    
     public String getEventType() { return eventType; }
     public void setEventType(String eventType) { this.eventType = eventType; }
+    
     public String getActorId() { return actorId; }
     public void setActorId(String actorId) { this.actorId = actorId; }
+    
     public String getResourceType() { return resourceType; }
     public void setResourceType(String resourceType) { this.resourceType = resourceType; }
+    
     public String getResourceId() { return resourceId; }
     public void setResourceId(String resourceId) { this.resourceId = resourceId; }
+    
     public String getPayload() { return payload; }
     public void setPayload(String payload) { this.payload = payload; }
+    
     public Instant getTimestamp() { return timestamp; }
     public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
+    
     public String getCurrentHash() { return currentHash; }
     public void setCurrentHash(String currentHash) { this.currentHash = currentHash; }
+    
     public String getPreviousHash() { return previousHash; }
     public void setPreviousHash(String previousHash) { this.previousHash = previousHash; }
 
     public boolean isArchived() { return isArchived; }
-    public void setArchived(boolean archived) { isArchived = archived; }
+    public void setArchived(boolean archived) { this.isArchived = archived; }
+    
     public boolean isRedacted() { return isRedacted; }
-    public void setRedacted(boolean redacted) { isRedacted = redacted; }
+    public void setRedacted(boolean redacted) { this.isRedacted = redacted; }
+
+    public String getRedactionReceipt() { return redactionReceipt; }
+    public void setRedactionReceipt(String redactionReceipt) { this.redactionReceipt = redactionReceipt; }
 }

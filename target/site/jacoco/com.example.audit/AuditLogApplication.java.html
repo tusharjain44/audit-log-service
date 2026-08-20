@@ -3,12 +3,18 @@
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.util.StringUtils;
 
 @SpringBootApplication
 @EnableScheduling
-<span class="fc" id="L9">public class AuditLogApplication {</span>
+<span class="fc" id="L10">public class AuditLogApplication {</span>
     public static void main(String[] args) {
-<span class="nc" id="L11">        SpringApplication.run(AuditLogApplication.class, args);</span>
-<span class="nc" id="L12">    }</span>
+<span class="nc" id="L12">        String adminPass = System.getenv(&quot;ADMIN_PASSWORD&quot;);</span>
+<span class="nc bnc" id="L13" title="All 2 branches missed.">        if (!StringUtils.hasText(adminPass)) {</span>
+<span class="nc" id="L14">            System.err.println(&quot;FATAL: ADMIN_PASSWORD environment variable is missing. Halting startup.&quot;);</span>
+<span class="nc" id="L15">            System.exit(1);</span>
+        }
+<span class="nc" id="L17">        SpringApplication.run(AuditLogApplication.class, args);</span>
+<span class="nc" id="L18">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

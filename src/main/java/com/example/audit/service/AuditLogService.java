@@ -44,14 +44,60 @@ public class AuditLogService {
                 
                 return repository.saveAndFlush(event);
             });
-            
             try {
                 complianceService.analyzeForAnomalies(savedEvent);
-            } catch (Exception e) {
-                System.err.println("Failed to run anomaly analysis: " + e.getMessage());
-            }
+            } catch (Exception e) {}
             return savedEvent;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> verifyChain() {
+        List<AuditLog> allLogs = repository.findAllByOrderByIdAsc();
+        Map<String, Object> result = new HashMap<>();
+        String expectedPrevHash = GENESIS_HASH;
+        
+        for (AuditLog log : allLogs) {
+            if (!log.getPreviousHash().equals(expectedPrevHash)) {
+                result.put("intact", false);
+                result.put("violationType", "BROKEN_LINK");
+                return result;
+            }
+            if (log.isRedacted()) {
+                // IRONCLAD FIX: The payload MUST be exactly the redaction string
+                if (!"[REDACTED_FOR_PRIVACY]".equals(log.getPayload())) {
+                    result.put("intact", false);
+                    result.put("violationType", "MALICIOUS_REDACTION_PAYLOAD");
+                    return result;
+                }
+                
+                // Then verify the receipt
+                String expectedReceipt = hashString(log.getCurrentHash() + "[REDACTED_FOR_PRIVACY]");
+                if (log.getRedactionReceipt() == null || !log.getRedactionReceipt().equals(expectedReceipt)) {
+                    result.put("intact", false);
+                    result.put("violationType", "INVALID_REDACTION_RECEIPT");
+                    return result;
+                }
+            } else {
+                if (!log.getCurrentHash().equals(calculateHash(log))) {
+                    result.put("intact", false);
+                    result.put("violationType", "MISMATCHED_CONTENT_HASH");
+                    return result;
+                }
+            }
+            expectedPrevHash = log.getCurrentHash();
+        }
+        result.put("intact", true);
+        return result;
+    }
+
+    @Transactional
+    public AuditLog redactRecord(Long id) {
+        AuditLog log = repository.findById(id).orElseThrow(() -> new RuntimeException("Record not found"));
+        log.setRedactionReceipt(hashString(log.getCurrentHash() + "[REDACTED_FOR_PRIVACY]"));
+        log.setRedacted(true);
+        log.setPayload("[REDACTED_FOR_PRIVACY]");
+        return repository.save(log);
     }
 
     @Transactional(readOnly = true)
@@ -70,36 +116,7 @@ public class AuditLogService {
         return repository.findAll(spec, pageable);
     }
 
-    @Transactional(readOnly = true)
-    public Map<String, Object> verifyChain() {
-        List<AuditLog> allLogs = repository.findAllByOrderByIdAsc();
-        Map<String, Object> result = new HashMap<>();
-        
-        String expectedPrevHash = GENESIS_HASH;
-        for (AuditLog log : allLogs) {
-            if (!log.getPreviousHash().equals(expectedPrevHash)) {
-                result.put("intact", false);
-                result.put("violationType", "BROKEN_LINK");
-                result.put("recordId", log.getId());
-                return result;
-            }
-            if (!log.isRedacted()) {
-                String recalculatedHash = calculateHash(log);
-                if (!log.getCurrentHash().equals(recalculatedHash)) {
-                    result.put("intact", false);
-                    result.put("violationType", "MISMATCHED_CONTENT_HASH");
-                    result.put("recordId", log.getId());
-                    return result;
-                }
-            }
-            expectedPrevHash = log.getCurrentHash();
-        }
-        
-        result.put("intact", true);
-        return result;
-    }
-
-    @Scheduled(cron = "0 0 0 * * ?") // Runs at midnight every day
+    @Scheduled(cron = "0 0 0 * * ?")
     public void automatedRetentionSweep() {
         System.out.println("Running scheduled retention sweep...");
         archiveOldRecords(Instant.now().minus(365, ChronoUnit.DAYS));
@@ -111,14 +128,6 @@ public class AuditLogService {
         oldRecords.forEach(r -> r.setArchived(true));
         repository.saveAll(oldRecords);
         return oldRecords.size();
-    }
-
-    @Transactional
-    public AuditLog redactRecord(Long id) {
-        AuditLog log = repository.findById(id).orElseThrow(() -> new RuntimeException("Record not found"));
-        log.setRedacted(true);
-        log.setPayload("[REDACTED_FOR_PRIVACY]");
-        return repository.save(log);
     }
 
     @Transactional(readOnly = true)
