@@ -15,3 +15,6 @@ Used Gemini as an interactive coding assistant for architecture validation, secu
 ## Limitations Inventory
 * In-memory file H2 database used for prototype; production requires external Postgres/MySQL.
 * Full chain verification is currently linear ($O(n)$) and will require batching logic at production scale.
+
+* **Infrastructure Security (SEC-06, SEC-09):** TLS termination, strict CORS policies, and rate-limiting are explicitly deferred to the deployment infrastructure layer (e.g., API Gateway / Load Balancer) and are not embedded in this application prototype.
+
