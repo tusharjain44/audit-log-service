@@ -18,3 +18,9 @@ Used Gemini as an interactive coding assistant for architecture validation, secu
 
 * **Infrastructure Security (SEC-06, SEC-09):** TLS termination, strict CORS policies, and rate-limiting are explicitly deferred to the deployment infrastructure layer (e.g., API Gateway / Load Balancer) and are not embedded in this application prototype.
 
+
+## Prompt-to-Change Traceability Map
+* **Prompt:** "How do I serialize concurrent writes..." -> **Commit/Change:** Added TransactionTemplate and @Lock(PESSIMISTIC_WRITE) in commit 7ce90f735d82c11d5c7dccba938b27b0323a9d1d.
+* **Prompt:** "Generate a MockMvc test suite..." -> **Commit/Change:** Created AuditLogControllerTest.java enforcing RBAC in commit 7ce90f735d82c11d5c7dccba938b27b0323a9d1d.
+* **Prompt:** "What is the correct JPQL query..." -> **Commit/Change:** Optimized generateReport in ComplianceService in commit 7ce90f735d82c11d5c7dccba938b27b0323a9d1d.
+
