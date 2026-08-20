@@ -5,8 +5,6 @@ import com.example.audit.model.UserAccount;
 import com.example.audit.repository.UserAccountRepository;
 import com.example.audit.service.CustomUserDetailsService;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
@@ -18,7 +16,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest
 class EnterpriseSecurityTest {
 
     @Test

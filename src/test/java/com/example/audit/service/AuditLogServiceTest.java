@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.example.audit.AuditLogApplication.class)
 class AuditLogServiceTest {
 
     @Autowired private AuditLogService auditLogService;
