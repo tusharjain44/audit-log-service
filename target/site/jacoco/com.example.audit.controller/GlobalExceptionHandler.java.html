@@ -5,32 +5,33 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@RestControllerAdvice
+@ControllerAdvice
 <span class="fc" id="L15">public class GlobalExceptionHandler {</span>
 <span class="fc" id="L16">    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleValidationExceptions(MethodArgumentNotValidException ex) {
-<span class="fc" id="L20">        Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L21">        ex.getBindingResult().getFieldErrors().forEach(error -&gt; </span>
-<span class="fc" id="L22">            errors.put(error.getField(), error.getDefaultMessage()));</span>
-<span class="fc" id="L23">        logger.warn(&quot;Validation failed for payload: {}&quot;, errors);</span>
-<span class="fc" id="L24">        return ResponseEntity.badRequest().body(errors);</span>
+        // STRICT SEC-08: Log the failure but DO NOT log the raw input map to prevent PII leakage
+<span class="fc" id="L21">        logger.warn(&quot;SECURITY_AUDIT: Request rejected due to payload validation failure.&quot;);</span>
+        
+<span class="fc" id="L23">        Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L24">        errors.put(&quot;error&quot;, &quot;Bad Request&quot;);</span>
+<span class="fc" id="L25">        errors.put(&quot;message&quot;, &quot;Payload validation failed. Ensure all fields meet formatting constraints.&quot;);</span>
+<span class="fc" id="L26">        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);</span>
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleGenericException(Exception ex) {
-<span class="nc" id="L29">        logger.error(&quot;Unhandled exception caught by global handler: &quot;, ex);</span>
-<span class="nc" id="L30">        Map&lt;String, String&gt; error = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L31">        error.put(&quot;error&quot;, &quot;Internal Server Error&quot;);</span>
-<span class="nc" id="L32">        error.put(&quot;message&quot;, &quot;An unexpected operational error occurred.&quot;);</span>
-<span class="nc" id="L33">        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);</span>
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleAllExceptions(Exception ex) {
+<span class="nc" id="L31">        logger.error(&quot;SECURITY_AUDIT: Internal server error encountered.&quot;, ex);</span>
+<span class="nc" id="L32">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L33">        response.put(&quot;error&quot;, &quot;Internal Server Error&quot;);</span>
+<span class="nc" id="L34">        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

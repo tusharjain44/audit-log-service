@@ -16,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/audit")
 public class AuditLogController {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuditLogController.class);
 
     private final AuditLogService auditLogService;
 
@@ -67,6 +68,7 @@ public class AuditLogController {
 
     @PostMapping("/events/{id}/redact")
     public ResponseEntity<AuditLog> redactRecord(@PathVariable Long id) {
+        logger.warn("ADMIN_AUDIT: Administrator initiated redaction on record ID: {}", id);
         return ResponseEntity.ok(auditLogService.redactRecord(id));
     }
 

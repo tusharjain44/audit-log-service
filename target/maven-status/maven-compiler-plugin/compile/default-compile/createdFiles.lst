@@ -1,3 +1,4 @@
+com\example\audit\model\AuditLogRequest.class
 com\example\audit\service\AuditLogService.class
 com\example\audit\dto\AuditLogRequest.class
 com\example\audit\model\AuditLog.class
