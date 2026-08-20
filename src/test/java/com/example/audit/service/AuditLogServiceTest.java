@@ -29,6 +29,16 @@ class AuditLogServiceTest {
     void setUp() { auditLogRepository.deleteAll(); }
 
     @Test
+    void testChainVerificationFailsOnCorruptedHash() {
+        AuditLog saved = createTestEvent();
+        saved.setCurrentHash("corrupted-hash");
+        auditLogRepository.save(saved);
+        Map<String, Object> verification = auditLogService.verifyChain();
+        assertFalse((Boolean) verification.get("intact"));
+        assertEquals("MISMATCHED_CONTENT_HASH", verification.get("violationType"));
+    }
+
+    @Test
     void testTamperDetectionCatchesModifiedPayload() {
         AuditLog saved = createTestEvent();
         saved.setPayload("tampered data");

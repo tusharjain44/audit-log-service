@@ -2,6 +2,8 @@ package com.example.audit.controller;
 
 import com.example.audit.model.AuditLog;
 import com.example.audit.model.AuditLogRequest;
+import com.example.audit.model.IdempotencyRecord;
+import com.example.audit.repository.IdempotencyRepository;
 import com.example.audit.service.AuditLogService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -16,38 +18,40 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/audit")
 public class AuditLogController {
     private static final Logger logger = LoggerFactory.getLogger(AuditLogController.class);
     private final AuditLogService auditLogService;
-    
-    // Idempotency cache to prevent replay attacks
-    private final Set<String> processedRequests = ConcurrentHashMap.newKeySet();
+    private final IdempotencyRepository idempotencyRepository;
 
-    public AuditLogController(AuditLogService auditLogService) {
+    public AuditLogController(AuditLogService auditLogService, IdempotencyRepository idempotencyRepository) {
         this.auditLogService = auditLogService;
+        this.idempotencyRepository = idempotencyRepository;
     }
 
     @PostMapping("/events")
     public ResponseEntity<?> createEvent(
             @Valid @RequestBody AuditLogRequest request,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @RequestHeader(value = "Idempotency-Key") String idempotencyKey,
+            Principal principal) {
         
-        if (idempotencyKey != null && !processedRequests.add(idempotencyKey)) {
+        // STRICT SEC-06: Mandatory, database-backed idempotency check
+        if (idempotencyRepository.existsById(idempotencyKey)) {
             logger.warn("SECURITY_AUDIT: Replay attack or duplicate request blocked for key: {}", idempotencyKey);
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Duplicate Request"));
         }
+        idempotencyRepository.save(new IdempotencyRecord(idempotencyKey, principal.getName(), String.valueOf(request.getPayload().hashCode()), Instant.now()));
 
         AuditLog log = new AuditLog();
         log.setEventType(request.getEventType());
-        log.setActorId(request.getActorId());
+        // STRICT SEC-03: Actor ID is firmly bound to the authenticated user token, blocking spoofing
+        log.setActorId(principal.getName()); 
         log.setResourceType(request.getResourceType());
         log.setResourceId(request.getResourceId());
         log.setPayload(request.getPayload());
+        
         return ResponseEntity.ok(auditLogService.createEvent(log));
     }
 
@@ -64,9 +68,7 @@ public class AuditLogController {
             Principal principal,
             Authentication auth) {
         
-        if (page < 0 || size <= 0 || size > 100) {
-            throw new IllegalArgumentException("Pagination parameters out of bounds");
-        }
+        if (page < 0 || size <= 0 || size > 100) throw new IllegalArgumentException("Pagination parameters out of bounds");
 
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (!isAdmin) {
@@ -76,7 +78,6 @@ public class AuditLogController {
             }
             actorId = principal.getName();
         }
-
         return ResponseEntity.ok(auditLogService.queryEvents(actorId, eventType, resourceType, resourceId, from, to, PageRequest.of(page, size)));
     }
 

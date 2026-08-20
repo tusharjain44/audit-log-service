@@ -2,10 +2,9 @@
 
 | Claim / Feature | Source Implementation | Test Evidence |
 | :--- | :--- | :--- |
-| **Tamper & Redaction Integrity** | `AuditLogService.verifyChain()`, `AuditLogService.redactRecord()` | `testRedactionReceiptPreventsBypass()`, `testTamperDetectionCatchesModifiedPayload()` |
-| **Cross-Actor Isolation** | `AuditLogController.queryEvents()` | `testCrossActorIsolationBlocksAccess()` |
-| **Replay Attack Prevention** | `AuditLogController.createEvent()` | `testIdempotencyBlocksReplayAttacks()` |
-| **Concurrency Serialization** | `AuditLogService.createEvent()` | `testConcurrentAppendsDoNotFractureChain()` |
-| **RBAC & Authentication** | `SecurityConfig.java` | `whenUnauthenticated_thenReturns401()`, `whenUserAccessesAdminRoute_thenReturns403()` |
-| **Input Validation (DTOs)** | `AuditLogRequest.java`, `GlobalExceptionHandler.java` | `testMalformedPaginationReturns400()`, `whenInvalidPayload_thenReturns400()` |
-| **Transaction Rollback** | `AuditLogService.createEvent()` | `testPersistenceFailureRollsBack()` |
+| **Fail-Closed Secret Validation** | `SecurityStartupConfig.java` | `testMissingSecretsThrowsExceptionOnStartup()` |
+| **DB-Backed Identity Store** | `CustomUserDetailsService.java`, `UserAccount.java` | `testUserDetailsServiceLoadsValidUser()`, `testUserDetailsServiceRejectsInvalidUser()` |
+| **Tamper & Redaction Re-anchoring** | `AuditLogService.verifyChain()`, `AuditLogService.redactRecord()` | `testChainVerificationFailsOnCorruptedHash()`, `testRedactionReceiptPreventsBypass()` |
+| **Actor Anti-Spoofing & Isolation** | `AuditLogController.createEvent()`, `AuditLogController.queryEvents()` | `testActorSpoofingIsPrevented()`, `testCrossActorIsolationBlocksAccess()` |
+| **Durable Idempotency / Replay Guard** | `IdempotencyRecord.java`, `AuditLogController.createEvent()` | `testIdempotencyBlocksReplayAttacks()` |
+| **Transaction Rollback & Concurrency** | `AuditLogService.createEvent()` | `testPersistenceFailureRollsBack()`, `testConcurrentAppendsDoNotFractureChain()` |

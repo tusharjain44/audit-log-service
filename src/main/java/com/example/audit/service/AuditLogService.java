@@ -51,6 +51,7 @@ public class AuditLogService {
         }
     }
 
+    
     @Transactional(readOnly = true)
     public Map<String, Object> verifyChain() {
         List<AuditLog> allLogs = repository.findAllByOrderByIdAsc();
@@ -59,48 +60,34 @@ public class AuditLogService {
         
         for (AuditLog log : allLogs) {
             if (!log.getPreviousHash().equals(expectedPrevHash)) {
-                result.put("intact", false);
-                result.put("violationType", "BROKEN_LINK");
-                return result;
+                result.put("intact", false); result.put("violationType", "BROKEN_LINK"); return result;
             }
             if (log.isRedacted()) {
-                // IRONCLAD FIX: The payload MUST be exactly the redaction string
                 if (!"[REDACTED_FOR_PRIVACY]".equals(log.getPayload())) {
-                    result.put("intact", false);
-                    result.put("violationType", "MALICIOUS_REDACTION_PAYLOAD");
-                    return result;
+                    result.put("intact", false); result.put("violationType", "MALICIOUS_REDACTION_PAYLOAD"); return result;
                 }
-                
-                // Then verify the receipt
-                String expectedReceipt = hashString(log.getCurrentHash() + "[REDACTED_FOR_PRIVACY]");
-                if (log.getRedactionReceipt() == null || !log.getRedactionReceipt().equals(expectedReceipt)) {
-                    result.put("intact", false);
-                    result.put("violationType", "INVALID_REDACTION_RECEIPT");
-                    return result;
+                if (!log.getCurrentHash().equals(calculateHash(log))) {
+                    result.put("intact", false); result.put("violationType", "MISMATCHED_REDACTED_HASH"); return result;
                 }
+                expectedPrevHash = log.getOriginalHash(); // ARCH-02: Re-anchor the chain using original hash
             } else {
                 if (!log.getCurrentHash().equals(calculateHash(log))) {
-                    result.put("intact", false);
-                    result.put("violationType", "MISMATCHED_CONTENT_HASH");
-                    return result;
+                    result.put("intact", false); result.put("violationType", "MISMATCHED_CONTENT_HASH"); return result;
                 }
+                expectedPrevHash = log.getCurrentHash();
             }
-            expectedPrevHash = log.getCurrentHash();
         }
-        result.put("intact", true);
-        return result;
+        result.put("intact", true); return result;
     }
-
     @Transactional
     public AuditLog redactRecord(Long id) {
         AuditLog log = repository.findById(id).orElseThrow(() -> new RuntimeException("Record not found"));
-        log.setRedactionReceipt(hashString(log.getCurrentHash() + "[REDACTED_FOR_PRIVACY]"));
+        log.setOriginalHash(log.getCurrentHash());
         log.setRedacted(true);
         log.setPayload("[REDACTED_FOR_PRIVACY]");
+        log.setCurrentHash(calculateHash(log)); // ARCH-02: Do not leave currentHash inconsistent
         return repository.save(log);
-    }
-
-    @Transactional(readOnly = true)
+    }@Transactional(readOnly = true)
     public Page<AuditLog> queryEvents(String actorId, String eventType, String resourceType, String resourceId, Instant from, Instant to, Pageable pageable) {
         Specification<AuditLog> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -143,7 +130,7 @@ public class AuditLogService {
         for (AuditLog r : records) {
             hashChain.append(r.getCurrentHash());
         }
-        bundle.setBundleSignature(hashString(hashChain.toString()));
+        bundle.setBundleSignature(generateHmacSignature(hashChain.toString()));
         return bundle;
     }
 
@@ -166,6 +153,25 @@ public class AuditLogService {
             return hexString.toString();
         } catch (Exception e) {
             throw new RuntimeException("Hashing failed", e);
+        }
+    }
+
+    private String generateHmacSignature(String data) {
+        try {
+            String secret = System.getenv().getOrDefault("HMAC_SECRET", "FallbackOnlyForTests123!@#");
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            javax.crypto.spec.SecretKeySpec secretKeySpec = new javax.crypto.spec.SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(secretKeySpec);
+            byte[] hmacBytes = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hmacBytes) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("HMAC generation failed", e);
         }
     }
 }

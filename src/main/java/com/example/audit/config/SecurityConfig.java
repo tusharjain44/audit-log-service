@@ -43,22 +43,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-        UserDetails admin = User.builder()
-            .username("admin")
-            .password(passwordEncoder.encode(adminPassword))
-            .roles("ADMIN")
-            .build();
-            
-        UserDetails user = User.builder()
-            .username("service_client")
-            .password(passwordEncoder.encode(userPassword))
-            .roles("USER")
-            .build();
-            
-        return new InMemoryUserDetailsManager(admin, user);
-    }
+    
 
     @Bean
     public PasswordEncoder passwordEncoder() {

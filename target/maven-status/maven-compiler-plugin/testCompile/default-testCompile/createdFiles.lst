@@ -1,2 +1,3 @@
+com\example\audit\EnterpriseSecurityTest.class
 com\example\audit\controller\AuditLogControllerTest.class
 com\example\audit\service\AuditLogServiceTest.class

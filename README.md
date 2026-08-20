@@ -1,23 +1,16 @@
-# Audit Log Service
+# Audit Log Service (Enterprise Edition)
 
-## API Specification & Error Contract
-This service exposes a secure, paginated REST API for managing tamper-evident audit logs.
+## Architecture & Security Specifications
+This service exposes a secure, paginated REST API for managing tamper-evident audit logs with enterprise-grade cryptographic controls.
 
-### Authentication & Authorization (RBAC & Isolation)
-* **Security:** HTTP Basic Authentication is enforced on all routes with fail-closed secret injection.
-* **Roles & Isolation:** `USER` can append and read *only* their own active logs (Cross-Actor Isolation enforced). `ADMIN` is required for redaction, archival, verification, and compliance exports.
+### Authentication, Identity & RBAC (SEC-02, SEC-03, SEC-05)
+* **Persistent Identity Store:** In-memory users have been replaced with a managed database-backed identity store (`UserAccountRepository`) using BCrypt password hashing.
+* **Fail-Closed Startup:** The application enforces strict secret validation on startup. If required environment variables (`ADMIN_PASSWORD`, `USER_PASSWORD`) are missing, the application halts immediately.
+* **Anti-Spoofing & Actor Isolation:** Actor IDs are cryptographically bound to the authenticated `Principal` token on `POST /events`. Client-supplied actor IDs in request bodies are ignored. Cross-actor isolation is strictly enforced (users can only access their own records unless they possess `ROLE_ADMIN`).
 
-### Endpoints (v1)
-* `POST /audit/events` - Append a new event. (Requires `Idempotency-Key` header to prevent replay attacks).
-* `GET /audit/events` - Query events with strict pagination bounds.
-* `GET /audit/verify` - [ADMIN] Run full cryptographic chain and redaction receipt verification.
-* `POST /audit/events/{id}/redact` - [ADMIN] Cryptographically redact a payload with an immutable receipt.
-* `DELETE /audit/archive` - [ADMIN] Soft-delete old records.
-* `GET /audit/export` - [ADMIN] Generate a cryptographically signed subset of records.
-* `GET /audit/compliance/report` - [ADMIN] Generate an aggregated frequency report.
+### Idempotency & Replay Protection (SEC-06)
+* **Durable Idempotency Store:** Replay attacks and duplicate submissions are blocked using a database-backed table (`idempotency_keys`) with unique constraints, actor scoping, and payload hashes.
 
-### Production Readiness & Rigor (Deployment)
-While this prototype runs an embedded H2 database for testing, a hardened production profile (`application-prod.properties`) is provided. The production profile enforces:
-* PostgreSQL dependency with `ddl-auto=validate` to prevent accidental schema corruption.
-* TLS/HTTPS termination at the application tier.
-* Strict PII sanitization in logs and dedicated `ADMIN_AUDIT` trails.
+### Cryptographic Integrity & Re-anchoring (ARCH-02, SEC-07)
+* **HMAC Signatures:** Redaction receipts and export bundles utilize `HmacSHA256` keyed cryptographic signatures rather than raw hashes.
+* **Redaction Re-anchoring:** Redacted records maintain chain continuity via an immutable `originalHash` reference, ensuring tampering checks remain mathematically valid.

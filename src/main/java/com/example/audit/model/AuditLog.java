@@ -27,6 +27,7 @@ public class AuditLog {
 
     // Scenario B Additions
     @Column(nullable = false) private boolean isArchived = false;
+    private String originalHash;
     @Column(nullable = false) private boolean isRedacted = false;
     
     // Cryptographic proof of authorized redaction
@@ -69,4 +70,6 @@ public class AuditLog {
 
     public String getRedactionReceipt() { return redactionReceipt; }
     public void setRedactionReceipt(String redactionReceipt) { this.redactionReceipt = redactionReceipt; }
+    public String getOriginalHash() { return originalHash; }
+    public void setOriginalHash(String originalHash) { this.originalHash = originalHash; }
 }

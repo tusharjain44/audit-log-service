@@ -43,26 +43,11 @@ import org.springframework.security.web.SecurityFilterChain;
 <span class="fc" id="L43">        return http.build();</span>
     }
 
-    @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-<span class="fc" id="L48">        UserDetails admin = User.builder()</span>
-<span class="fc" id="L49">            .username(&quot;admin&quot;)</span>
-<span class="fc" id="L50">            .password(passwordEncoder.encode(adminPassword))</span>
-<span class="fc" id="L51">            .roles(&quot;ADMIN&quot;)</span>
-<span class="fc" id="L52">            .build();</span>
-            
-<span class="fc" id="L54">        UserDetails user = User.builder()</span>
-<span class="fc" id="L55">            .username(&quot;service_client&quot;)</span>
-<span class="fc" id="L56">            .password(passwordEncoder.encode(userPassword))</span>
-<span class="fc" id="L57">            .roles(&quot;USER&quot;)</span>
-<span class="fc" id="L58">            .build();</span>
-            
-<span class="fc" id="L60">        return new InMemoryUserDetailsManager(admin, user);</span>
-    }
+    
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-<span class="fc" id="L65">        return new BCryptPasswordEncoder();</span>
+<span class="fc" id="L50">        return new BCryptPasswordEncoder();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

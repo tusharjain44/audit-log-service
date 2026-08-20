@@ -27,47 +27,50 @@ public class AuditLog {
 
     // Scenario B Additions
 <span class="fc" id="L29">    @Column(nullable = false) private boolean isArchived = false;</span>
-<span class="fc" id="L30">    @Column(nullable = false) private boolean isRedacted = false;</span>
+    private String originalHash;
+<span class="fc" id="L31">    @Column(nullable = false) private boolean isRedacted = false;</span>
     
     // Cryptographic proof of authorized redaction
     @Column(length = 64) private String redactionReceipt;
 
-<span class="fc" id="L35">    public AuditLog() {}</span>
+<span class="fc" id="L36">    public AuditLog() {}</span>
 
-<span class="fc" id="L37">    public Long getId() { return id; }</span>
-<span class="nc" id="L38">    public void setId(Long id) { this.id = id; }</span>
+<span class="fc" id="L38">    public Long getId() { return id; }</span>
+<span class="nc" id="L39">    public void setId(Long id) { this.id = id; }</span>
     
-<span class="fc" id="L40">    public String getEventType() { return eventType; }</span>
-<span class="fc" id="L41">    public void setEventType(String eventType) { this.eventType = eventType; }</span>
+<span class="fc" id="L41">    public String getEventType() { return eventType; }</span>
+<span class="fc" id="L42">    public void setEventType(String eventType) { this.eventType = eventType; }</span>
     
-<span class="fc" id="L43">    public String getActorId() { return actorId; }</span>
-<span class="fc" id="L44">    public void setActorId(String actorId) { this.actorId = actorId; }</span>
+<span class="fc" id="L44">    public String getActorId() { return actorId; }</span>
+<span class="fc" id="L45">    public void setActorId(String actorId) { this.actorId = actorId; }</span>
     
-<span class="fc" id="L46">    public String getResourceType() { return resourceType; }</span>
-<span class="fc" id="L47">    public void setResourceType(String resourceType) { this.resourceType = resourceType; }</span>
+<span class="fc" id="L47">    public String getResourceType() { return resourceType; }</span>
+<span class="fc" id="L48">    public void setResourceType(String resourceType) { this.resourceType = resourceType; }</span>
     
-<span class="fc" id="L49">    public String getResourceId() { return resourceId; }</span>
-<span class="fc" id="L50">    public void setResourceId(String resourceId) { this.resourceId = resourceId; }</span>
+<span class="fc" id="L50">    public String getResourceId() { return resourceId; }</span>
+<span class="fc" id="L51">    public void setResourceId(String resourceId) { this.resourceId = resourceId; }</span>
     
-<span class="fc" id="L52">    public String getPayload() { return payload; }</span>
-<span class="fc" id="L53">    public void setPayload(String payload) { this.payload = payload; }</span>
+<span class="fc" id="L53">    public String getPayload() { return payload; }</span>
+<span class="fc" id="L54">    public void setPayload(String payload) { this.payload = payload; }</span>
     
-<span class="fc" id="L55">    public Instant getTimestamp() { return timestamp; }</span>
-<span class="fc" id="L56">    public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }</span>
+<span class="fc" id="L56">    public Instant getTimestamp() { return timestamp; }</span>
+<span class="fc" id="L57">    public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }</span>
     
-<span class="fc" id="L58">    public String getCurrentHash() { return currentHash; }</span>
-<span class="fc" id="L59">    public void setCurrentHash(String currentHash) { this.currentHash = currentHash; }</span>
+<span class="fc" id="L59">    public String getCurrentHash() { return currentHash; }</span>
+<span class="fc" id="L60">    public void setCurrentHash(String currentHash) { this.currentHash = currentHash; }</span>
     
-<span class="fc" id="L61">    public String getPreviousHash() { return previousHash; }</span>
-<span class="fc" id="L62">    public void setPreviousHash(String previousHash) { this.previousHash = previousHash; }</span>
+<span class="fc" id="L62">    public String getPreviousHash() { return previousHash; }</span>
+<span class="fc" id="L63">    public void setPreviousHash(String previousHash) { this.previousHash = previousHash; }</span>
 
-<span class="fc" id="L64">    public boolean isArchived() { return isArchived; }</span>
-<span class="fc" id="L65">    public void setArchived(boolean archived) { this.isArchived = archived; }</span>
+<span class="fc" id="L65">    public boolean isArchived() { return isArchived; }</span>
+<span class="fc" id="L66">    public void setArchived(boolean archived) { this.isArchived = archived; }</span>
     
-<span class="fc" id="L67">    public boolean isRedacted() { return isRedacted; }</span>
-<span class="fc" id="L68">    public void setRedacted(boolean redacted) { this.isRedacted = redacted; }</span>
+<span class="fc" id="L68">    public boolean isRedacted() { return isRedacted; }</span>
+<span class="fc" id="L69">    public void setRedacted(boolean redacted) { this.isRedacted = redacted; }</span>
 
-<span class="fc" id="L70">    public String getRedactionReceipt() { return redactionReceipt; }</span>
-<span class="fc" id="L71">    public void setRedactionReceipt(String redactionReceipt) { this.redactionReceipt = redactionReceipt; }</span>
+<span class="fc" id="L71">    public String getRedactionReceipt() { return redactionReceipt; }</span>
+<span class="nc" id="L72">    public void setRedactionReceipt(String redactionReceipt) { this.redactionReceipt = redactionReceipt; }</span>
+<span class="fc" id="L73">    public String getOriginalHash() { return originalHash; }</span>
+<span class="fc" id="L74">    public void setOriginalHash(String originalHash) { this.originalHash = originalHash; }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
